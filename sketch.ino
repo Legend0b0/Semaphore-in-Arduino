@@ -1,6 +1,9 @@
 // Projeto 1 - MicroControladores
 // Autor: Gustavo Oliveira da Silva
 /*
+  O projeto simula um semáforo de um cruzamento de duas ruas de mão unica,
+onde para cada rua tem um semáforo de carro e um de pedestre.
+
 - No estado S0, o primeiro semáforo está em vermelho e o segundo em verde.
 - No estado S1, o primeiro semáforo está em vermelho e o segundo em amarelo.
 - No estado S2, o primeiro semáforo está em verde e o segundo em vermelho.
@@ -37,6 +40,9 @@ int countD2 = 0;
 static unsigned long timer = millis();
 int count = 0;
 
+// Setando variaveis de controle da função 'amarelo'
+bool lit = false;
+
 // Setando variaveis para os botões
 int Bottom1 = 2;
 int Bottom2 = 3;
@@ -55,11 +61,11 @@ void S0()
 
   if (millis() - timer >= 1000)
   {
-    timer += 1000;
-
     countD1--;
     countD2--;
     count++;
+    
+    timer = millis();
   }
   
   if(count == GREEN)
@@ -68,6 +74,7 @@ void S0()
     count = 0;
     countD1 = YELLOW;
     countD2 = 0;
+
     timer = millis();
   }
 }
@@ -82,10 +89,10 @@ void S1()
   
   if (millis() - timer >= 1000)
   {
-    timer += 1000;
-
     countD1--;
     count++;
+
+    timer = millis();
   }
   
   if(count == YELLOW)
@@ -94,6 +101,7 @@ void S1()
     count = 0;
     countD1 = GREEN;
     countD2 = RED;
+
     timer = millis();
   }
 }
@@ -109,11 +117,11 @@ void S2()
   
   if (millis() - timer >= 1000)
   {
-    timer += 1000;
-
     countD1--;
     countD2--;
     count++;
+
+    timer = millis();
   }
   
   if(count == GREEN)
@@ -122,6 +130,7 @@ void S2()
     count = 0;
     countD1 = 0;
     countD2 = YELLOW;
+
     timer = millis();
   }
 }
@@ -136,10 +145,10 @@ void S3()
   
   if (millis() - timer >= 1000)
   {
-    timer += 1000;
-
     countD2--;
     count++;
+
+    timer = millis();
   }
 
   if(count == YELLOW)
@@ -148,19 +157,31 @@ void S3()
     count = 0;
     countD1 = RED;
     countD2 = GREEN;
+
     timer = millis();
   }
 }
 
 // S4 - Semáforo 1 e 2 piscando amarelo
 void S4()
-{
-  PORTC = 0x22;
-  PORTB = 0x05;
-  delay(700);
-  PORTC = 0x00;
-  PORTB = 0x00;
-  delay(700);
+{  
+  if (millis() - timer >= 700)
+  {
+    lit = !lit;
+
+    if(lit)
+    {
+      PORTC = 0x22;
+      PORTB = 0x05;
+    }
+    else
+    {
+      PORTC = 0x00;
+      PORTB = 0x00;
+    }
+
+    timer = millis();
+  }
 }
 
 // Leitura serial para incio e fim do estado S4
@@ -176,7 +197,7 @@ void amarelo()
       Serial.print(entrada);
       fp = S4;
     }
-    if(entrada == "semáforo\n")
+    if((entrada == "semáforo\n") && (fp == S4))
     {
       Serial.print(entrada);
       fp = S0;
@@ -191,7 +212,7 @@ void amarelo()
 // Interrupção 1 - Liberação para o pedestre do cruzamento 1
 void interrupt_1()
 {
-  if((fp != S0) && (fp != S1) && (fp != S3))
+  if((fp != S0) && (fp != S1) && (fp != S3) && (fp != S4))
   {
     fp = S3;
     count = 0;
@@ -204,7 +225,7 @@ void interrupt_1()
 // Interrupção 2 - Liberação para o pedestre do cruzamento 2
 void interrupt_2()
 {
-  if((fp != S1) && (fp != S2) && (fp != S3))
+  if((fp != S1) && (fp != S2) && (fp != S3) && (fp != S4))
   {
     fp = S1;
     count = 0;
